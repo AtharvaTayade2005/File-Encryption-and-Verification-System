@@ -1,9 +1,9 @@
 """
 File Encryption & Verification System (FEVS) - Interactive Web GUI.
-Compliant with PECE04T / PECE04P Module 2 (Computer & Network Security).
+Compliant with PECE04T / PECE04P Module 2 & Module 3 (Computer & Network Security).
 
 Built with Streamlit to demonstrate step-by-step cryptographic operations,
-hybrid encryption, digital signatures, and security defenses.
+hybrid encryption, digital signatures, security defenses, and threat analysis.
 """
 
 import os
@@ -38,6 +38,7 @@ from src.file_vault import (
     pack_cns_file,
     unpack_cns_file,
 )
+from src.security_analyzer import inspect_payload_safety
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -109,6 +110,14 @@ st.markdown("""
         max-height: 140px;
         overflow-y: auto;
     }
+    .danger-box {
+        background-color: #FEF2F2;
+        border: 1px solid #FECACA;
+        border-left: 4px solid #EF4444;
+        padding: 1rem 1.25rem;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -116,13 +125,11 @@ st.markdown("""
 # --- Session State Initialization for Keys ---
 def init_default_keys():
     if "sender_priv_pem" not in st.session_state:
-        # Generate Alice (Sender)
         alice_priv, alice_pub = generate_rsa_keypair(2048)
         st.session_state.sender_priv_pem = export_key_to_pem(alice_priv, is_private=True)
         st.session_state.sender_pub_pem = export_key_to_pem(alice_pub, is_private=False)
 
     if "recip_priv_pem" not in st.session_state:
-        # Generate Bob (Recipient)
         bob_priv, bob_pub = generate_rsa_keypair(2048)
         st.session_state.recip_priv_pem = export_key_to_pem(bob_priv, is_private=True)
         st.session_state.recip_pub_pem = export_key_to_pem(bob_pub, is_private=False)
@@ -134,7 +141,7 @@ init_default_keys()
 with st.sidebar:
     st.markdown("### 🎓 PECE04T / PECE04P")
     st.markdown("**Computer & Network Security**")
-    st.markdown("`Module 2: Cryptographic Techniques`")
+    st.markdown("`Module 2: Cryptography & Module 3: Threats`")
     st.divider()
 
     st.markdown("### ⚙️ Symmetric Algorithm")
@@ -200,7 +207,7 @@ st.markdown('<div class="sub-header">Interactive Cryptographic Pipeline & Securi
 tab1, tab2, tab3 = st.tabs([
     "🔐 1. Encrypt & Package File",
     "🔓 2. Decrypt & Authenticate Container",
-    "🧪 3. Security Defense & Tamper Lab (Evaluator)"
+    "🧪 3. Attack Simulation & Professor Evaluation Lab"
 ])
 
 
@@ -216,7 +223,7 @@ with tab1:
 
     uploaded_file = st.file_uploader("Select a file to encrypt & package:", type=None, key="encrypt_uploader")
 
-    col_btn, col_info = st.columns([1, 3])
+    col_btn, _ = st.columns([1, 3])
     with col_btn:
         encrypt_btn = st.button("🚀 Encrypt & Build .cns Container", type="primary", use_container_width=True)
 
@@ -226,7 +233,6 @@ with tab1:
         file_size = len(plaintext)
 
         with st.spinner("Executing cryptographic pipeline..."):
-            # Load keys
             sender_priv = load_key_from_pem(st.session_state.sender_priv_pem, is_private=True)
             recip_pub = load_key_from_pem(st.session_state.recip_pub_pem, is_private=False)
 
@@ -347,12 +353,12 @@ with tab2:
     st.markdown("### Decryption & Cryptographic Verification")
     st.write(
         "Upload a `.cns` vault container to unpack, unwrap the session key, "
-        "verify the HMAC-SHA256 tag in constant time, decrypt the payload, and validate the sender's digital signature."
+        "verify the HMAC-SHA256 tag in constant time, decrypt the payload, validate the digital signature, "
+        "and inspect the payload with the post-decryption Threat Analyzer."
     )
 
     cns_file = st.file_uploader("Upload .cns container to decrypt:", type=["cns"], key="decrypt_uploader")
 
-    # Convenience button if user encrypted in Tab 1
     if "latest_cns" in st.session_state and cns_file is None:
         if st.button("📋 Load latest container from Tab 1"):
             cns_file = st.session_state["latest_cns"]
@@ -362,7 +368,6 @@ with tab2:
         decrypt_action = st.button("🔓 Decrypt & Authenticate", type="primary", use_container_width=True)
 
     if (cns_file is not None or "latest_cns" in st.session_state) and decrypt_action:
-        # Determine raw bytes
         if hasattr(cns_file, "read"):
             raw_cns = cns_file.read()
             container_name = getattr(cns_file, "name", "vault.cns")
@@ -426,11 +431,21 @@ with tab2:
             st.markdown(f'<p><span class="badge-fail">✖ FAIL</span> <b>Signature Verification Error:</b> {e}</p>', unsafe_allow_html=True)
             st.stop()
 
+        # 6. Post-Decryption Threat Analysis (Module 3)
+        restored_filename = container_name.replace(".cns", "") if container_name.endswith(".cns") else "restored_payload.bin"
+        safety_report = inspect_payload_safety(plaintext, restored_filename)
+        
+        st.markdown("#### 🛡️ Post-Decryption Payload Threat Scanner (Module 3)")
+        if safety_report["is_safe"]:
+            st.markdown(f'<p><span class="badge-pass">✔ SAFE DOCUMENT</span> <b>Signature:</b> {safety_report["magic_detected"]} | <b>Threat Level:</b> {safety_report["threat_level"]}</p>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<p><span class="badge-fail">🚨 {safety_report["threat_level"]}</span> <b>Dangerous Payload Detected:</b> {safety_report["magic_detected"]}</p>', unsafe_allow_html=True)
+            st.warning(f"⚠️ {safety_report['details']}")
+
         # Success Presentation
         st.divider()
         st.success("🎉 All 4 Cryptographic Guarantees (Confidentiality, Integrity, Authenticity, Non-Repudiation) SATISFIED!")
 
-        # Preview if possible
         try:
             text_preview = plaintext.decode("utf-8")
             st.caption("Plaintext Preview (UTF-8):")
@@ -438,8 +453,6 @@ with tab2:
         except UnicodeDecodeError:
             st.info("Binary payload restored (non-text format).")
 
-        # Download button
-        restored_filename = container_name.replace(".cns", "") if container_name.endswith(".cns") else "restored_payload.bin"
         st.download_button(
             label=f"💾 Download Verified Plaintext ({restored_filename})",
             data=plaintext,
@@ -452,99 +465,199 @@ with tab2:
 
 
 # ==============================================================================
-# TAB 3: SECURITY DEFENSE & TAMPER LAB
+# TAB 3: ATTACK SIMULATION & PROFESSOR EVALUATION LAB
 # ==============================================================================
 with tab3:
-    st.markdown("### 🧪 Security Defense & Tamper Lab (Evaluator Demo)")
+    st.markdown("### 🧪 Attack Simulation & Professor Evaluation Lab")
     st.write(
-        "Demonstrates active defensive behavior against ciphertext tampering and active bit-flipping attacks. "
-        "Evaluators can simulate an adversary intercepting the `.cns` container and flipping a single bit/byte in transit."
+        "Interactive testbed for professors and evaluators to test adversarial attacks against FEVS: "
+        "Active wire bit-flipping, sender signature forgery, and disguised trojan horse payloads."
     )
 
-    tamper_cns_file = st.file_uploader("Upload .cns file for tampering test:", type=["cns"], key="tamper_uploader")
-    if tamper_cns_file is None and "latest_cns" in st.session_state:
-        st.info("💡 Using the latest generated container from Tab 1.")
-        raw_tamper_cns = st.session_state["latest_cns"]
-    elif tamper_cns_file is not None:
-        raw_tamper_cns = tamper_cns_file.read()
-    else:
-        raw_tamper_cns = None
+    sub_tab_a, sub_tab_b, sub_tab_c = st.tabs([
+        "⚡ Subsection A: Bit-Flip / Tamper Simulator",
+        "🎭 Subsection B: Sender Identity Forgery Test",
+        "🦠 Subsection C: Malicious Payload Scanner"
+    ])
 
-    if raw_tamper_cns:
-        try:
-            parsed = unpack_cns_file(raw_tamper_cns)
-        except Exception as e:
-            st.error(f"Failed to unpack container: {e}")
-            st.stop()
-
-        st.markdown("#### 📦 Original Container Inspection")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Cipher Mode", "AES-256-CBC" if parsed["cipher_type"] == CIPHER_AES else "DES-CBC")
-        c2.metric("IV Length", f"{len(parsed['iv'])} Bytes")
-        c3.metric("Ciphertext Size", f"{len(parsed['ciphertext'])} Bytes")
-        c4.metric("HMAC Tag Size", f"{len(parsed['hmac_tag'])} Bytes")
-
-        st.caption("Original HMAC-SHA256 Tag (stored in header):")
-        st.markdown(f'<div class="hex-box">{parsed["hmac_tag"].hex()}</div>', unsafe_allow_html=True)
-
-        st.divider()
-        st.markdown("#### 💥 Adversary Simulation: Active Bit-Flip Attack")
+    # --------------------------------------------------------------------------
+    # SUBSECTION A: BIT-FLIP / TAMPER SIMULATOR
+    # --------------------------------------------------------------------------
+    with sub_tab_a:
+        st.markdown("#### ⚡ Active Adversary: In-Flight Ciphertext Tampering")
         st.write(
-            "An active attacker flips 1 byte inside the ciphertext on the wire while leaving the original HMAC tag intact in the container header."
+            "Simulates an attacker intercepting the `.cns` container on the wire and corrupting 1 byte in the ciphertext. "
+            "Demonstrates how the **Encrypt-then-MAC** architecture catches the tamper immediately and halts before decryption."
         )
 
-        offset = st.slider("Select Byte Offset in Ciphertext to Corrupt:", min_value=0, max_value=max(0, len(parsed["ciphertext"]) - 1), value=0)
+        tamper_cns_file = st.file_uploader("Upload .cns container for tampering:", type=["cns"], key="sub_a_uploader")
+        if tamper_cns_file is None and "latest_cns" in st.session_state:
+            st.info("💡 Using latest generated container from Tab 1.")
+            raw_tamper_cns = st.session_state["latest_cns"]
+        elif tamper_cns_file is not None:
+            raw_tamper_cns = tamper_cns_file.read()
+        else:
+            raw_tamper_cns = None
 
-        if st.button("🚨 Simulate Adversary Attack & Attempt Decryption", type="primary"):
-            # Corrupt exactly 1 byte
-            corrupted_ct = bytearray(parsed["ciphertext"])
-            orig_val = corrupted_ct[offset]
-            corrupted_ct[offset] ^= 0x01  # Flip 1 bit
-            new_val = corrupted_ct[offset]
-
-            # Re-pack with original HMAC tag
-            corrupted_cns = pack_cns_file(
-                cipher_type=parsed["cipher_type"],
-                iv=parsed["iv"],
-                wrapped_key=parsed["wrapped_key"],
-                hmac_tag=parsed["hmac_tag"],  # attacker does not have session key to recompute HMAC!
-                signature=parsed["signature"],
-                ciphertext=bytes(corrupted_ct),
+        if raw_tamper_cns:
+            parsed = unpack_cns_file(raw_tamper_cns)
+            offset = st.slider(
+                "Select Ciphertext Byte Offset to Invert:",
+                min_value=0,
+                max_value=max(0, len(parsed["ciphertext"]) - 1),
+                value=0,
+                key="sub_a_slider"
             )
 
-            st.warning(f"Attacker flipped byte at offset `{offset}`: `0x{orig_val:02x}` ➡️ `0x{new_val:02x}`")
+            if st.button("⚡ Inject 1-Bit Corruption into Ciphertext", type="primary", key="sub_a_inject_btn"):
+                corrupted_ct = bytearray(parsed["ciphertext"])
+                orig_byte = corrupted_ct[offset]
+                corrupted_ct[offset] ^= 0x01  # Flip 1 bit
+                new_byte = corrupted_ct[offset]
 
-            st.markdown("#### 🛡️ Execution of FEVS Defense Mechanism")
+                st.warning(f"Adversary inverted bit at offset `{offset}`: `0x{orig_byte:02x}` ➡️ `0x{new_byte:02x}`")
 
-            # 1. Unpack
-            st.markdown('<p><span class="badge-pass">✔ PASS</span> <b>Container Structure Unpacked</b></p>', unsafe_allow_html=True)
+                recip_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
+                recovered_key = unwrap_session_key(parsed["wrapped_key"], recip_priv)
 
-            # 2. Key unwrap
-            recip_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
-            recovered_key = unwrap_session_key(parsed["wrapped_key"], recip_priv)
-            st.markdown(f'<p><span class="badge-pass">✔ PASS</span> <b>Session Key Unwrapped:</b> <code>{recovered_key.hex()[:16]}...</code></p>', unsafe_allow_html=True)
+                computed_hmac = generate_hmac(recovered_key, bytes(corrupted_ct))
+                is_valid = verify_hmac(recovered_key, bytes(corrupted_ct), parsed["hmac_tag"])
 
-            # 3. HMAC Constant-Time Check
-            computed_hmac = generate_hmac(recovered_key, bytes(corrupted_ct))
-            is_valid = verify_hmac(recovered_key, bytes(corrupted_ct), parsed["hmac_tag"])
+                col_ea, col_eb = st.columns(2)
+                with col_ea:
+                    st.caption("Expected HMAC-SHA256 (from Header):")
+                    st.markdown(f'<div class="hex-box">{parsed["hmac_tag"].hex()}</div>', unsafe_allow_html=True)
+                with col_eb:
+                    st.caption("Computed HMAC-SHA256 (Tampered Ciphertext):")
+                    st.markdown(f'<div class="hex-box">{computed_hmac.hex()}</div>', unsafe_allow_html=True)
 
-            col_h1, col_h2 = st.columns(2)
-            with col_h1:
-                st.caption("Expected Tag (Container Header):")
-                st.markdown(f'<div class="hex-box">{parsed["hmac_tag"].hex()}</div>', unsafe_allow_html=True)
-            with col_h2:
-                st.caption("Computed Tag (Tampered Ciphertext):")
-                st.markdown(f'<div class="hex-box">{computed_hmac.hex()}</div>', unsafe_allow_html=True)
-
-            if not is_valid:
-                st.markdown('<p><span class="badge-fail">✖ DETECTED & HALTED</span> <b>Integrity Violation: HMAC mismatch detected before decryption.</b></p>', unsafe_allow_html=True)
-                st.error("🛑 DEFENSE TRIGGERED: Decryption immediately aborted. System refused to invoke AES-CBC decryptor or PKCS#7 unpadder.")
-                
-                with st.expander("🎓 CNS Evaluation Explanation (Why this matters)", expanded=True):
+                if not is_valid:
                     st.markdown("""
-                    - **Encrypt-then-MAC Security Guarantee**: Because the HMAC authentication tag is computed over the ciphertext and verified *before* decryption, any tampering in transit is caught immediately.
-                    - **Padding Oracle Defense**: If decryption were attempted on manipulated CBC ciphertext, unpadding errors would leak side-channel timing information to an attacker. By rejecting invalid HMACs first, padding oracle attacks are completely neutralized.
-                    - **Non-Repudiation Preserved**: The integrity check prevents corrupt payloads from reaching signature verification.
-                    """)
-    else:
-        st.info("👆 Please encrypt a file in Tab 1 or upload a .cns container above to test the Tamper Lab.")
+                    <div class="danger-box">
+                        <div class="step-title" style="color: #B91C1C;">🛑 Integrity Violation: HMAC mismatch. Zero decryption occurred.</div>
+                        <div><b>Defensive Action:</b> The HMAC-SHA256 constant-time check failed. The system immediately halted, refusing to invoke the AES/DES decryptor or PKCS#7 unpadder.</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    with st.expander("🎓 Why this prevents Padding Oracle Attacks", expanded=True):
+                        st.markdown("""
+                        - **Encrypt-then-MAC Security**: Verifying integrity *prior* to decryption guarantees that an attacker cannot send manipulated ciphertexts to observe PKCS#7 padding exceptions.
+                        - **Zero Information Leak**: Because zero cipher or unpad routines are executed, no side-channel timing signals are leaked to the attacker.
+                        """)
+        else:
+            st.info("👆 Please encrypt a file in Tab 1 or upload a .cns container above to test.")
+
+    # --------------------------------------------------------------------------
+    # SUBSECTION B: SENDER IDENTITY FORGERY TEST
+    # --------------------------------------------------------------------------
+    with sub_tab_b:
+        st.markdown("#### 🎭 Man-in-the-Middle: Sender Identity Forgery Test")
+        st.write(
+            "Simulates 'Attacker Eve' encrypting an unauthorized wire transfer to Bob, but signing with **Eve's private key** "
+            "while claiming to be Alice. Demonstrates that digital signatures guarantee **Non-Repudiation** and origin authenticity."
+        )
+
+        st.caption("Forged Message Payload:")
+        st.code("AUTHORIZATION: Transfer $1,000,000 to Eve's Account #987654321", language="text")
+
+        if st.button("🎭 Sign with Untrusted Third-Party Key", type="primary", key="sub_b_forgery_btn"):
+            with st.spinner("Simulating impostor attack..."):
+                # Generate Eve's rogue keys
+                eve_priv, eve_pub = generate_rsa_keypair(2048)
+                bob_pub = load_key_from_pem(st.session_state.recip_pub_pem, is_private=False)
+                bob_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
+                alice_pub = load_key_from_pem(st.session_state.sender_pub_pem, is_private=False)
+
+                fraud_msg = b"AUTHORIZATION: Transfer $1,000,000 to Eve's Account #987654321"
+
+                # Eve encrypts for Bob
+                session_key = os.urandom(32)
+                iv, ct = encrypt_symmetric(fraud_msg, session_key, CIPHER_AES)
+                wrapped_key = wrap_session_key(session_key, bob_pub)
+                tag = generate_hmac(session_key, ct)
+
+                # Eve signs with Eve's key!
+                eve_sig = sign_payload(fraud_msg, eve_priv)
+
+                rogue_cns = pack_cns_file(CIPHER_AES, iv, wrapped_key, tag, eve_sig, ct)
+
+                # Bob unwraps and decrypts
+                unpacked = unpack_cns_file(rogue_cns)
+                recov_key = unwrap_session_key(unpacked["wrapped_key"], bob_priv)
+                hmac_ok = verify_hmac(recov_key, unpacked["ciphertext"], unpacked["hmac_tag"])
+                dec_msg = decrypt_symmetric(unpacked["ciphertext"], recov_key, unpacked["iv"], CIPHER_AES)
+
+                # Bob validates against Alice's public key
+                is_alice_sig = verify_signature(dec_msg, unpacked["signature"], alice_pub)
+
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                st.markdown('<p><span class="badge-pass">✔ PASS</span> <b>Session Key Unwrapped:</b> Bob\'s private key decrypted the DEK.</p>', unsafe_allow_html=True)
+                st.markdown('<p><span class="badge-pass">✔ PASS</span> <b>HMAC Integrity Check:</b> Ciphertext was untouched on the wire.</p>', unsafe_allow_html=True)
+            with col_b2:
+                st.markdown('<p><span class="badge-pass">✔ PASS</span> <b>AES-256 Decryption:</b> Payload decrypted to text.</p>', unsafe_allow_html=True)
+                st.markdown('<p><span class="badge-fail">✖ FAILED</span> <b>Sender Signature Verification:</b> Signature does NOT match Alice!</p>', unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="danger-box">
+                <div class="step-title" style="color: #B91C1C;">🚨 Authenticity Failure: Digital signature does not match sender's public key.</div>
+                <div><b>Security Defense:</b> Bob successfully aborted the transaction. Even though the encryption was mathematically valid and the message was intact, the sender\'s identity could not be authenticated.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # --------------------------------------------------------------------------
+    # SUBSECTION C: MALICIOUS PAYLOAD SCANNER
+    # --------------------------------------------------------------------------
+    with sub_tab_c:
+        st.markdown("#### 🦠 Module 3: Threat Inspection & Trojan Disguise Scanner")
+        st.write(
+            "Evaluates post-decryption payload safety. Even if cryptographic checks pass, an attacker might transmit a "
+            "malicious executable or trojan disguised under a benign extension (e.g. `invoice.pdf` or `memo.txt`)."
+        )
+
+        col_t1, col_t2, col_t3 = st.columns(3)
+        with col_t1:
+            if st.button("📄 Test Legitimate PDF", use_container_width=True):
+                st.session_state["test_payload"] = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
+                st.session_state["test_ext"] = "invoice.pdf"
+
+        with col_t2:
+            if st.button("⚠️ Test Disguised Trojan EXE", use_container_width=True):
+                st.session_state["test_payload"] = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00This program cannot be run in DOS mode."
+                st.session_state["test_ext"] = "financial_report.pdf"
+
+        with col_t3:
+            if st.button("⚠️ Test Disguised Shell Script", use_container_width=True):
+                st.session_state["test_payload"] = b"#!/bin/bash\nrm -rf / --no-preserve-root\n"
+                st.session_state["test_ext"] = "project_notes.txt"
+
+        if "test_payload" in st.session_state:
+            payload_data = st.session_state["test_payload"]
+            declared_name = st.session_state["test_ext"]
+
+            st.write(f"**Scanning Payload:** `{declared_name}` ({len(payload_data)} bytes)")
+            st.caption("Magic Bytes Preview (Hex):")
+            st.code(payload_data[:32].hex(), language="text")
+
+            report = inspect_payload_safety(payload_data, declared_name)
+
+            if report["is_safe"]:
+                st.markdown(f"""
+                <div class="step-box" style="border-left-color: #22C55E;">
+                    <span class="badge-pass">✔ SAFE DOCUMENT</span>
+                    <div class="step-title" style="margin-top: 0.5rem;">File Structure Validated</div>
+                    <div><b>Identified Magic:</b> {report['magic_detected']}</div>
+                    <div><b>Threat Level:</b> {report['threat_level']}</div>
+                    <div>{report['details']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="danger-box">
+                    <span class="badge-fail">🚨 {report['threat_level']}</span>
+                    <div class="step-title" style="color: #B91C1C; margin-top: 0.5rem;">Dangerous Executable / Trojan Disguise Detected</div>
+                    <div><b>Detected Magic:</b> {report['magic_detected']}</div>
+                    <div><b>Declared Extension:</b> {declared_name}</div>
+                    <div style="margin-top: 0.5rem;"><b>Analysis:</b> {report['details']}</div>
+                </div>
+                """, unsafe_allow_html=True)

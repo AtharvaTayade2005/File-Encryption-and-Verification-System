@@ -19,6 +19,7 @@ This system directly implements and benchmarks **Module 2: Cryptographic Techniq
 | **Binary Packaging** | Custom `.cns` binary container (`b"CNS1"` magic header) packed via Python `struct`. | [`src/file_vault.py`](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/src/file_vault.py) |
 | **Secure Data Sanitization** | Multi-pass cryptographically random overwriting followed by zero-fill flushing before deletion (`shred_file`). | [`src/file_vault.py`](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/src/file_vault.py) |
 | **OpenSSL CLI Interoperability** | Automated cross-verification validating AES-256-CBC ciphertexts and HMAC-SHA256 digests against OpenSSL CLI vectors. | [`scripts/verify_openssl.py`](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/scripts/verify_openssl.py) |
+| **Threat & Trojan Inspection (Module 3)** | Post-decryption magic byte scanner detecting disguised PE/ELF binaries and double-extension attacks. | [`src/security_analyzer.py`](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/src/security_analyzer.py) |
 
 ---
 
@@ -113,7 +114,9 @@ The `.cns` container is formatted as a packed binary stream with big-endian byte
 File-Encryption-and-Verification-System/
 ├── .gitignore                    # Python bytecode, keys, and security artifacts
 ├── README.md                     # Complete project documentation and specification
-├── requirements.txt              # Dependencies (cryptography, pytest)
+├── requirements.txt              # Dependencies (cryptography, pytest, streamlit)
+├── app.py                        # Streamlit Interactive Web GUI Dashboard
+├── demo_suite.py                 # Automated 4-Scenario Professor Evaluation CLI Demo
 ├── scripts/
 │   ├── verify_openssl.py         # OpenSSL CLI cryptographic vector cross-verification
 │   └── verify_openssl.sh         # Shell script wrapper for OpenSSL validation
@@ -122,12 +125,14 @@ File-Encryption-and-Verification-System/
 │   ├── crypto_symmetric.py       # AES-256-CBC, DES-CBC, and PKCS#7 padding
 │   ├── crypto_asymmetric.py      # RSA-2048, OAEP wrapping, and PKCS#1 v1.5 signatures
 │   ├── file_vault.py             # HMAC-SHA256, .cns packing/unpacking, file shredding
+│   ├── security_analyzer.py      # Post-decryption magic byte threat & trojan detector
 │   └── main.py                   # Command-line interface (CLI) entry point
 └── tests/
     ├── __init__.py               # Test package initializer
     ├── test_symmetric.py         # 46 tests for symmetric ciphers & padding
     ├── test_asymmetric.py        # 14 tests for RSA, key wrapping, and signatures
     ├── test_vault.py             # 14 tests for HMAC, binary layout, and shredding
+    ├── test_security_analyzer.py # 9 tests for trojan detection & magic byte analysis
     ├── test_main.py              # 6 tests for CLI argument parsing & error exits
     └── test_integration.py       # 6 tests for multi-party lifecycles & OpenSSL
 ```
@@ -174,7 +179,36 @@ streamlit run app.py
 1. **Interactive RSA Key Manager**: Live key generation, PEM download, and public/private key previews in the sidebar.
 2. **Tab 1: Encrypt & Package**: Step-by-step visual breakdown of session key generation, CBC ciphertext preview, RSA digital signature, HMAC-SHA256 authentication tag, and RSA-OAEP key wrapping.
 3. **Tab 2: Decrypt & Authenticate**: Live security checklist validating container magic bytes (`b"CNS1"`), key unwrapping, constant-time HMAC check, and digital signature validation.
-4. **Tab 3: Evaluator Tamper Lab**: Allows evaluators to simulate an in-transit bit-flipping attack and observe how the system halts decryption at the HMAC check before any cipher or unpad operations occur.
+4. **Tab 3: Attack Simulation & Evaluation Lab**:
+   - **Subsection A (Bit-Flip Simulator)**: Injects active 1-bit wire corruption; verifies decryption halts at HMAC check with zero cipher execution.
+   - **Subsection B (Identity Forgery)**: Demonstrates rogue key signing and non-repudiation enforcement.
+   - **Subsection C (Threat Scanner)**: Post-decryption magic byte inspector flagging disguised executables and trojans.
+
+---
+
+## 🎯 Professor Demonstration & Attack Simulation Suite (`demo_suite.py`)
+
+FEVS includes an automated, color-coded interactive CLI demonstration suite designed specifically for course evaluation and lab vivas:
+
+```bash
+# Run the automated 4-scenario demonstration
+python demo_suite.py
+```
+
+### Demonstration Scenarios Covered:
+1. **Scenario 1: The CIA Baseline (Happy Path)**
+   - Auto-generates RSA keypairs for Alice and Bob.
+   - Encrypts confidential document via AES-256-CBC, computes HMAC-SHA256, signs via RSA-SHA256, wraps key via RSA-OAEP.
+   - Decrypts successfully, asserting 100% byte equivalence and non-repudiation.
+2. **Scenario 2: Active Adversary / Ciphertext Bit-Flip Attack (Integrity Demo)**
+   - Corrupts 1 byte in the ciphertext payload.
+   - Decryption immediately halts at the HMAC check before any cipher or unpad operations occur (`[ALERT] Integrity Violation`).
+3. **Scenario 3: Man-in-the-Middle / Impostor Sender Attack (Authenticity Demo)**
+   - Attacker Eve crafts and signs an unauthorized transfer claiming to be Alice.
+   - Bob unwraps and decrypts, but digital signature fails verification against Alice's public key (`[ALERT] RSA Signature Mismatch`).
+4. **Scenario 4: Disguised Trojan Payload Attack (Module 3 Threat Demo)**
+   - Attacker disguises a Windows PE executable (`b"MZ"`) as `financial_report.pdf`.
+   - Post-decryption payload inspection flags: `[CRITICAL DANGEROUS PAYLOAD DETECTED: Trojan/Executable disguised as PDF]`.
 
 ---
 
