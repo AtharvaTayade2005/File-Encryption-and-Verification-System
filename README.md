@@ -161,6 +161,23 @@ pip install -r requirements.txt
 
 ---
 
+## 🌐 Interactive Web GUI (Streamlit)
+
+FEVS includes an evaluation-ready, interactive web interface to visualize the cryptographic pipeline step-by-step and demonstrate active defense against adversary attacks:
+
+```bash
+# Launch the Streamlit Web Application
+streamlit run app.py
+```
+
+### Web GUI Features:
+1. **Interactive RSA Key Manager**: Live key generation, PEM download, and public/private key previews in the sidebar.
+2. **Tab 1: Encrypt & Package**: Step-by-step visual breakdown of session key generation, CBC ciphertext preview, RSA digital signature, HMAC-SHA256 authentication tag, and RSA-OAEP key wrapping.
+3. **Tab 2: Decrypt & Authenticate**: Live security checklist validating container magic bytes (`b"CNS1"`), key unwrapping, constant-time HMAC check, and digital signature validation.
+4. **Tab 3: Evaluator Tamper Lab**: Allows evaluators to simulate an in-transit bit-flipping attack and observe how the system halts decryption at the HMAC check before any cipher or unpad operations occur.
+
+---
+
 ## 💻 CLI Usage Guide
 
 ### 1. Generate RSA Keypairs (`keygen`)
