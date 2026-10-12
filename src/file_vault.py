@@ -242,4 +242,9 @@ def shred_file(filepath: str, passes: int = 3) -> None:
             f.flush()
             os.fsync(f.fileno())
 
-    os.remove(filepath)
+    try:
+        os.remove(filepath)
+    except PermissionError:
+        import stat
+        os.chmod(filepath, stat.S_IWRITE | stat.S_IREAD)
+        os.remove(filepath)

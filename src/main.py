@@ -37,6 +37,7 @@ from src.file_vault import (
     unpack_cns_file,
     shred_file,
 )
+from src.security_analyzer import inspect_payload_safety
 
 
 def handle_keygen(args: argparse.Namespace) -> int:
@@ -244,6 +245,19 @@ def handle_decrypt(args: argparse.Namespace) -> int:
 
     print(f"[+] Successfully decrypted and verified '{args.input}' -> '{args.output}'")
     print(f"    Restored Size: {len(plaintext)} bytes | Integrity & Authenticity: VALID")
+
+    # 7. Post-decryption threat inspection (Module 3 Malicious Software Defense)
+    safety = inspect_payload_safety(plaintext, args.output)
+    if not safety["is_safe"]:
+        sys.stderr.write(
+            f"[!] WARNING: Security Threat Detected in Decrypted Payload!\n"
+            f"    Threat Level:   {safety['threat_level']}\n"
+            f"    Magic Detected: {safety['magic_detected']}\n"
+            f"    Details:        {safety['details']}\n"
+        )
+    else:
+        print(f"    Payload Safety: SAFE ({safety['magic_detected']})")
+
     return 0
 
 

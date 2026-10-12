@@ -360,8 +360,8 @@ with tab2:
     cns_file = st.file_uploader("Upload .cns container to decrypt:", type=["cns"], key="decrypt_uploader")
 
     if "latest_cns" in st.session_state and cns_file is None:
-        if st.button("📋 Load latest container from Tab 1"):
-            cns_file = st.session_state["latest_cns"]
+        latest_name = st.session_state.get("latest_filename", "file") + ".cns"
+        st.info(f"💡 Ready to decrypt: latest container `{latest_name}` from Tab 1 is loaded in memory.")
 
     col_dec_btn, _ = st.columns([1, 3])
     with col_dec_btn:
@@ -517,8 +517,12 @@ with tab3:
 
                 st.warning(f"Adversary inverted bit at offset `{offset}`: `0x{orig_byte:02x}` ➡️ `0x{new_byte:02x}`")
 
-                recip_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
-                recovered_key = unwrap_session_key(parsed["wrapped_key"], recip_priv)
+                try:
+                    recip_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
+                    recovered_key = unwrap_session_key(parsed["wrapped_key"], recip_priv)
+                except Exception as e:
+                    st.error(f"Failed to unwrap session key with recipient private key: {e}")
+                    st.stop()
 
                 computed_hmac = generate_hmac(recovered_key, bytes(corrupted_ct))
                 is_valid = verify_hmac(recovered_key, bytes(corrupted_ct), parsed["hmac_tag"])

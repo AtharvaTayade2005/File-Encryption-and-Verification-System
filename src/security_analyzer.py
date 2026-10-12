@@ -40,7 +40,7 @@ def inspect_payload_safety(data: bytes, declared_extension: str) -> Dict[str, An
     magic_detected = "Unknown / Binary"
     is_safe = True
     threat_level = "SAFE"
-    details = f"No obvious executable threat detected for declared format '{ext or 'unspecified'}."
+    details = f"No obvious executable threat detected for declared format '{ext or 'unspecified'}'."
 
     if len(data) == 0:
         return {
@@ -76,8 +76,19 @@ def inspect_payload_safety(data: bytes, declared_extension: str) -> Dict[str, An
     else:
         # Check if valid printable UTF-8 / ASCII text
         try:
-            data[:1024].decode("utf-8")
-            magic_detected = "Plain Text (UTF-8 / ASCII)"
+            sample = data[:min(len(data), 1024)]
+            # Trim potential split multibyte UTF-8 tail at sample boundary
+            trimmed = sample
+            while trimmed and (trimmed[-1] & 0xC0 == 0x80):
+                trimmed = trimmed[:-1]
+            if trimmed and (trimmed[-1] & 0x80 != 0):
+                trimmed = trimmed[:-1]
+
+            (trimmed or sample).decode("utf-8")
+            if b"\x00" not in sample:
+                magic_detected = "Plain Text (UTF-8 / ASCII)"
+            else:
+                magic_detected = "Generic Binary Stream"
         except UnicodeDecodeError:
             magic_detected = "Generic Binary Stream"
 

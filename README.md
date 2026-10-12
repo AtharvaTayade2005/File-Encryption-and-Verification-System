@@ -23,6 +23,18 @@ This system directly implements and benchmarks **Module 2: Cryptographic Techniq
 
 ---
 
+## 📖 Deep-Dive Documentation Index
+
+Comprehensive guides for teammates, collaborators, and professors:
+
+- 🏗️ **[Architecture & Cryptographic Pipeline Guide](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/ARCHITECTURE_AND_PIPELINE.md)**: Full lifecycle breakdown, Mermaid data-flow diagrams, and `.cns` binary layout.
+- 🔬 **[Codebase Line-by-Line & Function Walkthrough](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/CODEBASE_LINE_BY_LINE_WALKTHROUGH.md)**: Detailed explanations of what every line of code does across all modules.
+- 🚀 **[User Guide & Practical Workflows](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/USER_GUIDE_AND_WORKFLOWS.md)**: End-to-end instructions for CLI, Streamlit web app, automated demo suite, and pytest.
+- 🛡️ **[Attack Defense & Security Model](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/ATTACK_DEFENSE_AND_SECURITY_MODEL.md)**: Cryptographic proofs and defenses against padding oracles, timing attacks, Bleichenbacher chosen-ciphertext, and Trojan horse disguises.
+- 🐞 **[Bugs Found & Resolved Audit Report](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/BUGS_FOUND_AND_FIXED.md)**: Audit log detailing bugs identified, root causes, mathematical fixes, and test evidence.
+
+---
+
 ## 🏛️ Architecture Overview
 
 FEVS employs a **Hybrid Cryptographic Architecture** combining the speed of symmetric block ciphers for arbitrary file sizes with the security of asymmetric cryptography for key exchange and non-repudiation.
@@ -276,7 +288,7 @@ python src/main.py decrypt \
 
 ## 🧪 Running Automated Tests
 
-Run the complete test suite (86 passing tests) with `pytest`:
+Run the complete test suite (95 passing tests) with `pytest`:
 
 ```bash
 # Run all tests

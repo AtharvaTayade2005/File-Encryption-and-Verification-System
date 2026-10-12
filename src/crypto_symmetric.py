@@ -106,9 +106,19 @@ def encrypt_symmetric(
                 f"Invalid DES key length: {len(key)} bytes. "
                 "DES requires 8 bytes (single DES) or 16/24 bytes (TripleDES)."
             )
+        # Normalize key for TripleDES to prevent single/two-key deprecation warnings
+        # Single DES (8 bytes) is mathematically equivalent to TripleDES with K1=K2=K3
+        # Two-key TripleDES (16 bytes) is mathematically equivalent to K1, K2, K1
+        if len(key) == 8:
+            des_key = key * 3
+        elif len(key) == 16:
+            des_key = key + key[:8]
+        else:
+            des_key = key
+
         iv = os.urandom(DES_BLOCK_SIZE_BITS // 8)  # 8 bytes
         padded_data = pad_data(plaintext, DES_BLOCK_SIZE_BITS)
-        cipher = Cipher(TripleDES(key), modes.CBC(iv))
+        cipher = Cipher(TripleDES(des_key), modes.CBC(iv))
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_data) + encryptor.finalize()
         return iv, ciphertext
@@ -168,7 +178,15 @@ def decrypt_symmetric(
             raise ValueError(
                 f"Invalid IV length for DES: expected {DES_BLOCK_SIZE_BITS // 8} bytes, got {len(iv)}."
             )
-        cipher = Cipher(TripleDES(key), modes.CBC(iv))
+        # Normalize key for TripleDES to prevent single/two-key deprecation warnings
+        if len(key) == 8:
+            des_key = key * 3
+        elif len(key) == 16:
+            des_key = key + key[:8]
+        else:
+            des_key = key
+
+        cipher = Cipher(TripleDES(des_key), modes.CBC(iv))
         decryptor = cipher.decryptor()
         padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
         return unpad_data(padded_plaintext, DES_BLOCK_SIZE_BITS)
