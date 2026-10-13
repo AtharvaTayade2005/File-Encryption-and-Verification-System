@@ -225,13 +225,11 @@ Command-Line Interface (CLI) entry point providing `keygen`, `encrypt`, and `dec
 ## 6. `app.py`
 
 Interactive Streamlit Web Dashboard:
-- **Sidebar**: Symmetric cipher selector (AES-256 vs DES), RSA keypair generator, PEM file download/upload widgets.
-- **Tab 1 (Encrypt & Package)**: File uploader, full cryptographic step breakdown (Hex previews of session key, IV, ciphertext, signature, HMAC, wrapped key), `.cns` download button.
-- **Tab 2 (Decrypt & Authenticate)**: Live security checklist with green/red status badges for Magic bytes, RSA-OAEP unwrap, HMAC integrity, symmetric unpadding, and signature verification.
-- **Tab 3 (Attack Simulation Lab)**:
-  - *Subsection A*: Inverts 1 bit in ciphertext; demonstrates early HMAC halt preventing padding oracle attacks.
-  - *Subsection B*: Eve encrypts and signs with her key; demonstrates authenticity failure on Bob's end.
-  - *Subsection C*: Tests disguised Windows executable (`MZ`) named `report.pdf`; triggers Trojan alarm.
+- **Sidebar**: Symmetric cipher selector (AES-256 vs DES), RSA keypair generator (Alice/Sender & Bob/Recipient), PEM file download/upload widgets.
+- **Tab 1 (Encrypt & Package)**: File uploader, full cryptographic step breakdown (Hex previews of session key, IV, ciphertext, signature, HMAC, wrapped key), `.cns` container packaging and download.
+- **Tab 2 (Decrypt & Authenticate)**: Live 6-point security checklist with status badges for Magic bytes (`b"CNS1"`), RSA-OAEP key unwrap, constant-time HMAC-SHA256 integrity, symmetric unpadding, RSA digital signature authentication, and post-decryption magic byte threat scanner.
+
+*(Note: Adversarial attack simulations and professor evaluations are automated in the dedicated CLI demo: `demo_suite.py`)*
 
 ---
 
@@ -239,9 +237,9 @@ Interactive Streamlit Web Dashboard:
 
 Automated, color-coded interactive presentation suite:
 - **Scenario 1 (The CIA Baseline)**: Executes complete happy path; asserts 100% cryptographic equivalence.
-- **Scenario 2 (Active Adversary Bit-Flip)**: Flips 8 bits at ciphertext byte 12; demonstrates HMAC rejection before decryption.
-- **Scenario 3 (Impostor Sender Attack)**: Eve attempts identity spoofing; digital signature check rejects the transaction.
-- **Scenario 4 (Disguised Trojan Attack)**: Flags embedded Windows PE executable disguised as `.pdf`.
+- **Scenario 2 (Active Adversary Bit-Flip)**: Inverts 8 bits at ciphertext byte 12; unwraps key and demonstrates constant-time HMAC rejection before decryption.
+- **Scenario 3 (Impostor Sender Attack)**: Eve attempts identity spoofing; digital signature check rejects the transaction and enforces non-repudiation.
+- **Scenario 4 (Disguised Trojan Attack)**: Flags embedded Windows PE executable (`b"MZ"`) disguised as `.pdf`.
 
 ---
 
@@ -250,3 +248,4 @@ Automated, color-coded interactive presentation suite:
 Cross-verification engine testing interoperability with OpenSSL CLI:
 - **`verify_aes_cbc`**: Encrypts test vector with FEVS AES-256-CBC, calls `openssl enc -d -aes-256-cbc -K ... -iv ...`, and confirms identical plaintext output.
 - **`verify_hmac_sha256`**: Computes HMAC with FEVS, calls `openssl dgst -sha256 -mac HMAC -macopt hexkey:...`, and confirms bit-for-bit tag equivalence.
+- **`verify_rsa_signature`**: Signs sample payload with FEVS RSA-2048 (PKCS#1 v1.5 + SHA-256), calls `openssl dgst -sha256 -verify ...`, and confirms verified signature output.

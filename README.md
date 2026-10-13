@@ -188,13 +188,11 @@ streamlit run app.py
 ```
 
 ### Web GUI Features:
-1. **Interactive RSA Key Manager**: Live key generation, PEM download, and public/private key previews in the sidebar.
-2. **Tab 1: Encrypt & Package**: Step-by-step visual breakdown of session key generation, CBC ciphertext preview, RSA digital signature, HMAC-SHA256 authentication tag, and RSA-OAEP key wrapping.
-3. **Tab 2: Decrypt & Authenticate**: Live security checklist validating container magic bytes (`b"CNS1"`), key unwrapping, constant-time HMAC check, and digital signature validation.
-4. **Tab 3: Attack Simulation & Evaluation Lab**:
-   - **Subsection A (Bit-Flip Simulator)**: Injects active 1-bit wire corruption; verifies decryption halts at HMAC check with zero cipher execution.
-   - **Subsection B (Identity Forgery)**: Demonstrates rogue key signing and non-repudiation enforcement.
-   - **Subsection C (Threat Scanner)**: Post-decryption magic byte inspector flagging disguised executables and trojans.
+1. **Interactive RSA Key Manager & Cipher Selector**: Live keypair generation, PEM download/upload for Alice (Sender) and Bob (Recipient), and public/private key previews in the sidebar, with toggling between AES-256-CBC and TripleDES.
+2. **Tab 1: Encrypt & Package**: Step-by-step visual breakdown of session key generation, CBC ciphertext preview, RSA digital signature, HMAC-SHA256 authentication tag, RSA-OAEP key wrapping, and `.cns` binary vault packaging.
+3. **Tab 2: Decrypt & Authenticate**: Live 6-point cryptographic inspection checklist validating container magic bytes (`b"CNS1"`), RSA-OAEP key unwrapping, constant-time HMAC check, symmetric decryption with PKCS#7 unpadding, RSA digital signature authentication, and post-decryption magic byte threat scanner (Module 3).
+
+*(Note: Adversarial attack simulations and viva demonstrations are automated via the dedicated CLI suite: `python demo_suite.py`)*
 
 ---
 
@@ -288,7 +286,7 @@ python src/main.py decrypt \
 
 ## 🧪 Running Automated Tests
 
-Run the complete test suite (95 passing tests) with `pytest`:
+Run the complete test suite (97 passing tests) with `pytest`:
 
 ```bash
 # Run all tests

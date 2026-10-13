@@ -184,11 +184,7 @@ The browser will open to `http://localhost:8501`.
 |    - Download PEM keys |  Tab 2: 🔓 Decrypt & Authenticate Container             |
 |  - Custom PEM Upload   |    - Live cryptographic validation checklist            |
 |                        |    - Post-decryption Trojan scanner                     |
-|                        |                                                         |
-|                        |  Tab 3: 🧪 Attack Simulation & Professor Evaluation Lab |
-|                        |    - Subsection A: Active Ciphertext Bit-Flip           |
-|                        |    - Subsection B: Sender Identity Forgery Test         |
-|                        |    - Subsection C: Trojan Horse / Malware Detector      |
+|                        |    - Restored file preview & download                   |
 +----------------------------------------------------------------------------------+
 ```
 
@@ -208,12 +204,8 @@ The browser will open to `http://localhost:8501`.
      - PKCS#7 Unpadding: Valid
      - RSA Signature: Verified against Alice
      - Post-decryption Payload Safety: Clean
-3. **Step 3: Attack Simulation in Tab 3**:
-   - Switch to **Tab 3 -> Subsection A**.
-   - Select byte offset `0` and click **"⚡ Inject 1-Bit Corruption into Ciphertext"**.
-   - Explain how HMAC mismatch halts the pipeline before decryption, preventing padding oracle attacks!
-   - Switch to **Subsection B**: Show how Eve's forged signature is rejected.
-   - Switch to **Subsection C**: Click **"Test Disguised Trojan EXE"**; show the professor the **CRITICAL DANGEROUS** alert.
+
+*(To demonstrate adversarial attacks like bit-flip wire corruption, impostor sender forgery, and disguised trojans to your professor, run the automated CLI demonstration suite: `python demo_suite.py`)*
 
 ---
 
@@ -235,7 +227,7 @@ This runs 4 back-to-back scenarios:
 
 ## 5. Automated Unit & Integration Testing (`pytest`)
 
-Execute the complete 95-test suite:
+Execute the complete 97-test suite:
 
 ```bash
 # Run all tests

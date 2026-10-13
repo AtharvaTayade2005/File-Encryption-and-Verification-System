@@ -17,7 +17,7 @@ During the full system audit, 11 issues across cryptography, security payload an
 | **BUG-03** | `src/security_analyzer.py` | Medium | Slicing at 1024 bytes caused false `UnicodeDecodeError` on multi-byte UTF-8 characters | **FIXED** |
 | **BUG-04** | `src/main.py` | Medium | CLI `decrypt` omitted Module 3 post-decryption payload threat scanner | **FIXED** |
 | **BUG-05** | `src/file_vault.py` | Low / OS | `shred_file` threw `PermissionError` on read-only files on Windows | **FIXED** |
-| **BUG-06** | `app.py` | Low | Unhandled session key unwrapping exception in Attack Simulation tab | **FIXED** |
+| **BUG-06** | `app.py` | Low | UI exception shielding during key unwrapping & streamlined to two core production tabs | **FIXED** |
 | **BUG-07** | `src/file_vault.py` | Medium | Enforced network Big-Endian (`!`) standard notation across `.cns` binary struct packing/unpacking | **FIXED** |
 | **BUG-08** | `src/security_analyzer.py` | Medium | Sub-4-byte boundary and bytearray normalization prevents potential `IndexError` | **FIXED** |
 | **BUG-09** | `scripts/verify_openssl.py` | Medium | Added Step 3 cross-verification validating RSA-2048 digital signatures against OpenSSL CLI | **FIXED** |
@@ -163,7 +163,7 @@ except PermissionError:
 In Tab 3 (Attack Simulation Lab), if a user uploaded an arbitrary `.cns` container created with an external key, clicking the bit-flip test caused `unwrap_session_key` to throw a `ValueError` because Bob's in-memory private key could not decrypt the key encapsulation block. This resulted in an unhandled exception crashing the Streamlit UI.
 
 #### Resolution:
-Wrapped `unwrap_session_key` in a graceful `try...except` block that displays an in-app error notification (`st.error`) rather than an unhandled stack trace.
+Wrapped `unwrap_session_key` in a graceful `try...except` block that displays an in-app error notification (`st.error`) rather than an unhandled stack trace. *(Note: In the final web application release, the Streamlit interface was streamlined to two core tabs — Encrypt and Decrypt — keeping the UI focused on production workflows, while all 4 adversarial attack simulations are fully preserved in the CLI suite `demo_suite.py`)*.
 
 ---
 
@@ -202,11 +202,12 @@ Added Step 3 (`verify_rsa_signature`) to `scripts/verify_openssl.py` and `tests/
 ### 10. BUG-10: Decoupling and UI Exception Shielding in `app.py` & `demo_suite.py`
 
 #### Problem:
-- In `app.py`, unhandled errors during Tab 1 encryption, Tab 3 container unpacking, or Tab 3 identity forgery simulation would display raw Python tracebacks.
+- In `app.py`, unhandled errors during Tab 1 encryption would display raw Python tracebacks.
 - In `demo_suite.py` Scenario 2, Bob's private key was not passed from Scenario 1, meaning key unwrapping and constant-time HMAC calculation on the tampered wire payload were mocked rather than executed end-to-end.
 
 #### Resolution:
-- Wrapped Tab 1 encryption, Tab 3 unpacking, and Tab 3 impostor simulations in `app.py` with `try...except` handlers displaying clean UI badges/alerts (`st.error`).
+- Wrapped Tab 1 encryption in `app.py` with `try...except` handlers displaying clean UI badges/alerts (`st.error`).
+- Streamlined the Streamlit interface into two dedicated tabs (`Tab 1: Encrypt & Package`, `Tab 2: Decrypt & Authenticate`).
 - Updated `run_scenario_1` in `demo_suite.py` to return `(cns_data, bob_priv)`, enabling Scenario 2 to actually execute session key unwrapping (`unwrap_session_key`), compute the tampered HMAC (`generate_hmac`), and assert `verify_hmac(...) is False`.
 
 ---
