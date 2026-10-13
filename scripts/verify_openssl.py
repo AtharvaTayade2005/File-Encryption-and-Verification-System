@@ -4,7 +4,8 @@ Compliant with PECE04T / PECE04P Module 2 (Computer & Network Security).
 
 Validates FEVS cryptographic primitives against standard OpenSSL CLI vectors:
   1. AES-256-CBC Decryption via `openssl enc -d -aes-256-cbc`
-  2. HMAC-SHA256 Authentication via `openssl dgst -sha256 -mac HMAC` and `openssl dgst -sha256 -hmac`
+  2. HMAC-SHA256 Authentication via `openssl dgst -sha256 -mac HMAC`
+  3. RSA-2048 Digital Signature Verification via `openssl dgst -sha256 -verify`
 """
 
 import os
@@ -17,6 +18,7 @@ import tempfile
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.crypto_symmetric import CIPHER_AES, encrypt_symmetric
+from src.crypto_asymmetric import generate_rsa_keypair, export_key_to_pem, sign_payload
 from src.file_vault import generate_hmac
 
 
@@ -144,6 +146,53 @@ def verify_hmac_sha256(openssl_bin: str) -> bool:
     return True
 
 
+def verify_rsa_signature(openssl_bin: str) -> bool:
+    """
+    Signs sample data using FEVS RSA-2048 (PKCS#1 v1.5 + SHA-256) engine and validates
+    that OpenSSL can verify the signature using the exported public key.
+    """
+    print("\n[+] Step 3: Validating RSA-2048 Digital Signature with OpenSSL...")
+
+    priv, pub = generate_rsa_keypair(2048)
+    sample_data = (
+        b"PECE04T Module 2: RSA-2048 Non-Repudiation and Digital Signature Test Vector.\n"
+        b"Verified against OpenSSL CLI standard implementation."
+    )
+    signature = sign_payload(sample_data, priv)
+    pub_pem = export_key_to_pem(pub, is_private=False)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        pub_file = os.path.join(tmp_dir, "pubkey.pem")
+        sig_file = os.path.join(tmp_dir, "signature.bin")
+        data_file = os.path.join(tmp_dir, "data.bin")
+
+        with open(pub_file, "wb") as f:
+            f.write(pub_pem)
+        with open(sig_file, "wb") as f:
+            f.write(signature)
+        with open(data_file, "wb") as f:
+            f.write(sample_data)
+
+        cmd = [
+            openssl_bin,
+            "dgst",
+            "-sha256",
+            "-verify", pub_file,
+            "-signature", sig_file,
+            data_file,
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0 or "Verified OK" not in result.stdout:
+            print(f"[-] OpenSSL signature verification failed:\n{result.stderr}\n{result.stdout}")
+            return False
+
+    print("    [PASS] OpenSSL successfully validated FEVS RSA-2048 digital signature.")
+    print("    Digest: SHA-256")
+    print(f"    Signature ({len(signature)} bytes): {signature.hex()[:32]}...")
+    return True
+
+
 def main() -> int:
     print("=" * 70)
     print(" FEVS OpenSSL Cryptographic Vector Cross-Verification Suite")
@@ -161,9 +210,10 @@ def main() -> int:
 
     ok_aes = verify_aes_cbc(openssl_bin)
     ok_hmac = verify_hmac_sha256(openssl_bin)
+    ok_rsa = verify_rsa_signature(openssl_bin)
 
     print("\n" + "=" * 70)
-    if ok_aes and ok_hmac:
+    if ok_aes and ok_hmac and ok_rsa:
         print("[SUCCESS] All cryptographic primitives are 100% compliant with OpenSSL standard vectors!")
         print("=" * 70)
         return 0

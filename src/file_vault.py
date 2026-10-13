@@ -115,9 +115,9 @@ def pack_cns_file(
         raise ValueError(f"Signature length exceeds 65535 bytes (got {len(signature)} bytes).")
 
     # Header Prefix: Magic (4B) + Cipher Type (1B) + IV Len (1B)
-    header_prefix = struct.pack(">4sBB", MAGIC_BYTES, cipher_type, len(iv))
-    wrapped_key_len_bytes = struct.pack(">H", len(wrapped_key))
-    sig_len_bytes = struct.pack(">H", len(signature))
+    header_prefix = struct.pack("!4sBB", MAGIC_BYTES, cipher_type, len(iv))
+    wrapped_key_len_bytes = struct.pack("!H", len(wrapped_key))
+    sig_len_bytes = struct.pack("!H", len(signature))
 
     return (
         header_prefix
@@ -143,12 +143,12 @@ def unpack_cns_file(raw_bytes: bytes) -> Dict[str, Any]:
     if not isinstance(raw_bytes, (bytes, bytearray)):
         raise TypeError("raw_bytes must be bytes or bytearray.")
 
-    prefix_size = struct.calcsize(">4sBB")
+    prefix_size = struct.calcsize("!4sBB")
     if len(raw_bytes) < prefix_size:
         raise ValueError("Invalid CNS file: data is too short to contain a valid header prefix.")
 
     offset = 0
-    magic, cipher_type, iv_len = struct.unpack_from(">4sBB", raw_bytes, offset)
+    magic, cipher_type, iv_len = struct.unpack_from("!4sBB", raw_bytes, offset)
     offset += prefix_size
 
     if magic != MAGIC_BYTES:
@@ -165,7 +165,7 @@ def unpack_cns_file(raw_bytes: bytes) -> Dict[str, Any]:
     # Read Wrapped Key Length & Data
     if len(raw_bytes) < offset + 2:
         raise ValueError("Invalid CNS file: truncated wrapped key length header.")
-    wrapped_key_len = struct.unpack_from(">H", raw_bytes, offset)[0]
+    wrapped_key_len = struct.unpack_from("!H", raw_bytes, offset)[0]
     offset += 2
 
     if len(raw_bytes) < offset + wrapped_key_len:
@@ -182,7 +182,7 @@ def unpack_cns_file(raw_bytes: bytes) -> Dict[str, Any]:
     # Read Signature Length & Data
     if len(raw_bytes) < offset + 2:
         raise ValueError("Invalid CNS file: truncated signature length header.")
-    sig_len = struct.unpack_from(">H", raw_bytes, offset)[0]
+    sig_len = struct.unpack_from("!H", raw_bytes, offset)[0]
     offset += 2
 
     if len(raw_bytes) < offset + sig_len:

@@ -50,14 +50,18 @@ def inspect_payload_safety(data: bytes, declared_extension: str) -> Dict[str, An
             "magic_detected": "Empty Payload",
         }
 
+    # Normalize data to immutable bytes for safe slice operations
+    # Boundary safe: All checks use prefix methods or guarded slices with zero risk of IndexError
+    raw_data = bytes(data)
+
     # 1. Magic byte identification
-    is_windows_pe = data.startswith(b"MZ")
-    is_linux_elf = data.startswith(b"\x7fELF")
-    is_shell_script = data.startswith(b"#!/bin/") or data.startswith(b"#!/usr/")
-    is_zip_archive = data.startswith(b"PK\x03\x04")
-    is_pdf = data.startswith(b"%PDF")
-    is_jpeg = data.startswith(b"\xff\xd8\xff")
-    is_png = data.startswith(b"\x89PNG\r\n\x1a\n")
+    is_windows_pe = raw_data.startswith(b"MZ")
+    is_linux_elf = raw_data.startswith(b"\x7fELF")
+    is_shell_script = raw_data.startswith(b"#!/bin/") or raw_data.startswith(b"#!/usr/")
+    is_zip_archive = raw_data.startswith(b"PK\x03\x04")
+    is_pdf = raw_data.startswith(b"%PDF")
+    is_jpeg = raw_data.startswith(b"\xff\xd8\xff")
+    is_png = raw_data.startswith(b"\x89PNG\r\n\x1a\n")
 
     if is_windows_pe:
         magic_detected = "Windows PE Executable / DLL (MZ)"
@@ -76,7 +80,7 @@ def inspect_payload_safety(data: bytes, declared_extension: str) -> Dict[str, An
     else:
         # Check if valid printable UTF-8 / ASCII text
         try:
-            sample = data[:min(len(data), 1024)]
+            sample = raw_data[:min(len(raw_data), 1024)]
             # Trim potential split multibyte UTF-8 tail at sample boundary
             trimmed = sample
             while trimmed and (trimmed[-1] & 0xC0 == 0x80):

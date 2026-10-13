@@ -109,12 +109,13 @@ def encrypt_symmetric(
         # Normalize key for TripleDES to prevent single/two-key deprecation warnings
         # Single DES (8 bytes) is mathematically equivalent to TripleDES with K1=K2=K3
         # Two-key TripleDES (16 bytes) is mathematically equivalent to K1, K2, K1
-        if len(key) == 8:
-            des_key = key * 3
-        elif len(key) == 16:
-            des_key = key + key[:8]
+        key_bytes = bytes(key)
+        if len(key_bytes) == 8:
+            des_key = key_bytes * 3
+        elif len(key_bytes) == 16:
+            des_key = key_bytes + key_bytes[:8]
         else:
-            des_key = key
+            des_key = key_bytes
 
         iv = os.urandom(DES_BLOCK_SIZE_BITS // 8)  # 8 bytes
         padded_data = pad_data(plaintext, DES_BLOCK_SIZE_BITS)
@@ -179,12 +180,13 @@ def decrypt_symmetric(
                 f"Invalid IV length for DES: expected {DES_BLOCK_SIZE_BITS // 8} bytes, got {len(iv)}."
             )
         # Normalize key for TripleDES to prevent single/two-key deprecation warnings
-        if len(key) == 8:
-            des_key = key * 3
-        elif len(key) == 16:
-            des_key = key + key[:8]
+        key_bytes = bytes(key)
+        if len(key_bytes) == 8:
+            des_key = key_bytes * 3
+        elif len(key_bytes) == 16:
+            des_key = key_bytes + key_bytes[:8]
         else:
-            des_key = key
+            des_key = key_bytes
 
         cipher = Cipher(TripleDES(des_key), modes.CBC(iv))
         decryptor = cipher.decryptor()

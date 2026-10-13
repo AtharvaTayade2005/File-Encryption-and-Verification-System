@@ -18,7 +18,12 @@ import pytest
 
 from src.file_vault import pack_cns_file, unpack_cns_file, verify_hmac
 from src.crypto_asymmetric import unwrap_session_key, verify_signature
-from scripts.verify_openssl import find_openssl_binary, verify_aes_cbc, verify_hmac_sha256
+from scripts.verify_openssl import (
+    find_openssl_binary,
+    verify_aes_cbc,
+    verify_hmac_sha256,
+    verify_rsa_signature,
+)
 
 
 @pytest.fixture
@@ -223,3 +228,6 @@ class TestOpenSSLVectorCompliance:
 
         # Test HMAC-SHA256 authentication vector with OpenSSL
         assert verify_hmac_sha256(openssl_bin) is True
+
+        # Test RSA-2048 digital signature verification with OpenSSL
+        assert verify_rsa_signature(openssl_bin) is True

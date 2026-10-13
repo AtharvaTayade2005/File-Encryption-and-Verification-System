@@ -12,6 +12,7 @@ Executes 4 comprehensive scenarios in an automated presentation format:
 import os
 import sys
 import time
+from typing import Tuple, Any
 
 # Ensure UTF-8 output on Windows consoles
 if sys.platform == "win32":
@@ -62,7 +63,7 @@ def print_banner(title: str, subtitle: str = "") -> None:
     print("=" * 78)
 
 
-def run_scenario_1() -> bytes:
+def run_scenario_1() -> Tuple[bytes, Any]:
     print_banner(
         "SCENARIO 1: THE CIA BASELINE (HAPPY PATH)",
         "Confidentiality, Integrity, Authenticity & Non-Repudiation Verified",
@@ -130,10 +131,10 @@ def run_scenario_1() -> bytes:
     print(f"      {GREEN}[PASS]{RESET} Digital signature authenticated against Alice's public key.")
 
     print(f"\n{BOLD}{GREEN}>>> RESULT: 100% Cryptographic Equivalence Achieved!{RESET}\n")
-    return cns_data
+    return cns_data, bob_priv
 
 
-def run_scenario_2(valid_cns: bytes) -> None:
+def run_scenario_2(valid_cns: bytes, bob_priv: Any) -> None:
     print_banner(
         "SCENARIO 2: ACTIVE ADVERSARY / BIT-FLIP ATTACK",
         "Demonstrating Tamper Defense & Early HMAC Halting",
@@ -165,13 +166,17 @@ def run_scenario_2(valid_cns: bytes) -> None:
     print(f"      {GREEN}[OK]{RESET} Container header unpacked (b'CNS1')")
 
     # Bob unwraps key
+    recovered_key = unwrap_session_key(rec_cns["wrapped_key"], bob_priv)
     print(f"      {GREEN}[OK]{RESET} RSA-OAEP session key unwrap: SUCCESS")
 
     # HMAC validation
     print(f"[{CYAN}2.3{RESET}] Running Constant-Time HMAC-SHA256 Verification...")
-    print(f"      {RED}{BOLD}[ALERT] Integrity Violation: HMAC mismatch detected before decryption!{RESET}")
-    print(f"      {RED}{BOLD}        Expected HMAC: {rec_cns['hmac_tag'].hex()[:32]}...{RESET}")
-    print(f"      {RED}{BOLD}        Computed HMAC: (MISMATCH - Tampered Payload){RESET}")
+    is_valid_hmac = verify_hmac(recovered_key, rec_cns["ciphertext"], rec_cns["hmac_tag"])
+    if not is_valid_hmac:
+        computed_hmac = generate_hmac(recovered_key, rec_cns["ciphertext"])
+        print(f"      {RED}{BOLD}[ALERT] Integrity Violation: HMAC mismatch detected before decryption!{RESET}")
+        print(f"      {RED}{BOLD}        Expected HMAC: {rec_cns['hmac_tag'].hex()[:32]}...{RESET}")
+        print(f"      {RED}{BOLD}        Computed HMAC: {computed_hmac.hex()[:32]}... (MISMATCH - Tampered Payload){RESET}")
 
     print(f"\n{BOLD}{GREEN}>>> DEFENSE MECHANISM TRIGGERED:{RESET}")
     print(f"    {YELLOW}* Decryption was HALTED before executing AES-CBC or PKCS#7 unpadding.{RESET}")
@@ -281,11 +286,11 @@ def main() -> int:
 
     try:
         # Scenario 1
-        valid_cns = run_scenario_1()
+        valid_cns, bob_priv = run_scenario_1()
         time.sleep(0.3)
 
         # Scenario 2
-        run_scenario_2(valid_cns)
+        run_scenario_2(valid_cns, bob_priv)
         time.sleep(0.3)
 
         # Scenario 3

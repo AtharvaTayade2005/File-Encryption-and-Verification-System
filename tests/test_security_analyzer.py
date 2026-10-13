@@ -64,6 +64,32 @@ class TestSecurityPayloadAnalyzer:
         assert report["is_safe"] is True
         assert report["threat_level"] == "SAFE"
 
+    def test_payloads_smaller_than_4_bytes_boundary_handling(self):
+        """Validates that payloads smaller than 4 bytes do not raise IndexError."""
+        short_samples = [
+            b"a",              # 1 byte ASCII
+            b"\x80",           # 1 byte non-ASCII
+            b"ab",             # 2 bytes
+            b"\xff\xfe",       # 2 bytes binary
+            b"abc",            # 3 bytes
+            b"\x00\x01\x02",   # 3 bytes binary with nulls
+            bytearray(b"x"),   # 1 byte bytearray
+            bytearray(b"xyz"), # 3 byte bytearray
+        ]
+        for sample in short_samples:
+            for ext in [".txt", ".pdf", ".bin", ""]:
+                report = inspect_payload_safety(sample, ext)
+                assert isinstance(report, dict)
+                assert "is_safe" in report
+                assert "threat_level" in report
+                assert "magic_detected" in report
+
+    def test_short_payload_with_pe_magic_triggers_alert(self):
+        # 2-byte 'MZ' disguised as .pdf should still trigger detection
+        report = inspect_payload_safety(b"MZ", ".pdf")
+        assert report["is_safe"] is False
+        assert report["threat_level"] == "CRITICAL DANGEROUS"
+
     def test_input_type_errors(self):
         with pytest.raises(TypeError):
             inspect_payload_safety("not bytes", ".pdf")  # type: ignore

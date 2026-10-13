@@ -144,7 +144,7 @@ File-Encryption-and-Verification-System/
     ├── test_symmetric.py         # 46 tests for symmetric ciphers & padding
     ├── test_asymmetric.py        # 14 tests for RSA, key wrapping, and signatures
     ├── test_vault.py             # 14 tests for HMAC, binary layout, and shredding
-    ├── test_security_analyzer.py # 9 tests for trojan detection & magic byte analysis
+    ├── test_security_analyzer.py # 11 tests for trojan detection, magic byte analysis & boundary cases
     ├── test_main.py              # 6 tests for CLI argument parsing & error exits
     └── test_integration.py       # 6 tests for multi-party lifecycles & OpenSSL
 ```

@@ -176,16 +176,16 @@ with st.sidebar:
 
     with st.expander("👤 Sender Keypair (Alice)"):
         st.caption("Public Key (used by Recipient to verify signatures):")
-        st.code(st.session_state.sender_pub_pem.decode("utf-8")[:160] + "\n...[TRUNCATED]...", language="text")
+        st.code(st.session_state.sender_pub_pem.decode("utf-8", errors="replace")[:160] + "\n...[TRUNCATED]...", language="text")
         st.caption("Private Key (used by Sender to create signatures):")
-        st.code(st.session_state.sender_priv_pem.decode("utf-8")[:160] + "\n...[TRUNCATED]...", language="text")
+        st.code(st.session_state.sender_priv_pem.decode("utf-8", errors="replace")[:160] + "\n...[TRUNCATED]...", language="text")
         st.download_button("💾 Download Alice Public Key", st.session_state.sender_pub_pem, "alice_public.pem")
 
     with st.expander("🎯 Recipient Keypair (Bob)"):
         st.caption("Public Key (used by Sender to wrap session key):")
-        st.code(st.session_state.recip_pub_pem.decode("utf-8")[:160] + "\n...[TRUNCATED]...", language="text")
+        st.code(st.session_state.recip_pub_pem.decode("utf-8", errors="replace")[:160] + "\n...[TRUNCATED]...", language="text")
         st.caption("Private Key (used by Recipient to unwrap session key):")
-        st.code(st.session_state.recip_priv_pem.decode("utf-8")[:160] + "\n...[TRUNCATED]...", language="text")
+        st.code(st.session_state.recip_priv_pem.decode("utf-8", errors="replace")[:160] + "\n...[TRUNCATED]...", language="text")
         st.download_button("💾 Download Bob Private Key", st.session_state.recip_priv_pem, "bob_private.pem")
 
     st.divider()
@@ -232,43 +232,47 @@ with tab1:
         file_name = uploaded_file.name
         file_size = len(plaintext)
 
-        with st.spinner("Executing cryptographic pipeline..."):
-            sender_priv = load_key_from_pem(st.session_state.sender_priv_pem, is_private=True)
-            recip_pub = load_key_from_pem(st.session_state.recip_pub_pem, is_private=False)
+        try:
+            with st.spinner("Executing cryptographic pipeline..."):
+                sender_priv = load_key_from_pem(st.session_state.sender_priv_pem, is_private=True)
+                recip_pub = load_key_from_pem(st.session_state.recip_pub_pem, is_private=False)
 
-            # Step 1: Session Key & IV
-            if cipher_type == CIPHER_AES:
-                session_key = os.urandom(32)  # 256 bits
-            else:
-                session_key = os.urandom(24)  # 192 bits 3DES
-            
-            iv, ciphertext = encrypt_symmetric(plaintext, session_key, cipher_type)
+                # Step 1: Session Key & IV
+                if cipher_type == CIPHER_AES:
+                    session_key = os.urandom(32)  # 256 bits
+                else:
+                    session_key = os.urandom(24)  # 192 bits 3DES
+                
+                iv, ciphertext = encrypt_symmetric(plaintext, session_key, cipher_type)
 
-            # Step 2: Digital Signature over Plaintext
-            signature = sign_payload(plaintext, sender_priv)
+                # Step 2: Digital Signature over Plaintext
+                signature = sign_payload(plaintext, sender_priv)
 
-            # Step 3: HMAC-SHA256 over Ciphertext
-            hmac_tag = generate_hmac(session_key, ciphertext)
+                # Step 3: HMAC-SHA256 over Ciphertext
+                hmac_tag = generate_hmac(session_key, ciphertext)
 
-            # Step 4: Wrap Session Key via RSA-OAEP
-            wrapped_key = wrap_session_key(session_key, recip_pub)
+                # Step 4: Wrap Session Key via RSA-OAEP
+                wrapped_key = wrap_session_key(session_key, recip_pub)
 
-            # Step 5: Pack .cns binary container
-            cns_container = pack_cns_file(
-                cipher_type=cipher_type,
-                iv=iv,
-                wrapped_key=wrapped_key,
-                hmac_tag=hmac_tag,
-                signature=signature,
-                ciphertext=ciphertext,
-            )
+                # Step 5: Pack .cns binary container
+                cns_container = pack_cns_file(
+                    cipher_type=cipher_type,
+                    iv=iv,
+                    wrapped_key=wrapped_key,
+                    hmac_tag=hmac_tag,
+                    signature=signature,
+                    ciphertext=ciphertext,
+                )
 
-            # Store in session state for tabs 2 and 3
-            st.session_state["latest_cns"] = cns_container
-            st.session_state["latest_filename"] = file_name
-            st.session_state["latest_plaintext"] = plaintext
+                # Store in session state for tabs 2 and 3
+                st.session_state["latest_cns"] = cns_container
+                st.session_state["latest_filename"] = file_name
+                st.session_state["latest_plaintext"] = plaintext
 
-        st.success(f"✅ Container successfully generated for **{file_name}** ({file_size} bytes -> {len(cns_container)} bytes)!")
+            st.success(f"✅ Container successfully generated for **{file_name}** ({file_size} bytes -> {len(cns_container)} bytes)!")
+        except Exception as e:
+            st.error(f"🚨 Cryptographic Pipeline Error: {e}")
+            st.stop()
 
         st.markdown("#### 🔍 Step-by-Step Cryptographic Breakdown")
 
@@ -500,7 +504,12 @@ with tab3:
             raw_tamper_cns = None
 
         if raw_tamper_cns:
-            parsed = unpack_cns_file(raw_tamper_cns)
+            try:
+                parsed = unpack_cns_file(raw_tamper_cns)
+            except Exception as e:
+                st.error(f"Invalid .cns container: {e}")
+                st.stop()
+
             offset = st.slider(
                 "Select Ciphertext Byte Offset to Invert:",
                 min_value=0,
@@ -565,34 +574,38 @@ with tab3:
         st.code("AUTHORIZATION: Transfer $1,000,000 to Eve's Account #987654321", language="text")
 
         if st.button("🎭 Sign with Untrusted Third-Party Key", type="primary", key="sub_b_forgery_btn"):
-            with st.spinner("Simulating impostor attack..."):
-                # Generate Eve's rogue keys
-                eve_priv, eve_pub = generate_rsa_keypair(2048)
-                bob_pub = load_key_from_pem(st.session_state.recip_pub_pem, is_private=False)
-                bob_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
-                alice_pub = load_key_from_pem(st.session_state.sender_pub_pem, is_private=False)
+            try:
+                with st.spinner("Simulating impostor attack..."):
+                    # Generate Eve's rogue keys
+                    eve_priv, eve_pub = generate_rsa_keypair(2048)
+                    bob_pub = load_key_from_pem(st.session_state.recip_pub_pem, is_private=False)
+                    bob_priv = load_key_from_pem(st.session_state.recip_priv_pem, is_private=True)
+                    alice_pub = load_key_from_pem(st.session_state.sender_pub_pem, is_private=False)
 
-                fraud_msg = b"AUTHORIZATION: Transfer $1,000,000 to Eve's Account #987654321"
+                    fraud_msg = b"AUTHORIZATION: Transfer $1,000,000 to Eve's Account #987654321"
 
-                # Eve encrypts for Bob
-                session_key = os.urandom(32)
-                iv, ct = encrypt_symmetric(fraud_msg, session_key, CIPHER_AES)
-                wrapped_key = wrap_session_key(session_key, bob_pub)
-                tag = generate_hmac(session_key, ct)
+                    # Eve encrypts for Bob
+                    session_key = os.urandom(32)
+                    iv, ct = encrypt_symmetric(fraud_msg, session_key, CIPHER_AES)
+                    wrapped_key = wrap_session_key(session_key, bob_pub)
+                    tag = generate_hmac(session_key, ct)
 
-                # Eve signs with Eve's key!
-                eve_sig = sign_payload(fraud_msg, eve_priv)
+                    # Eve signs with Eve's key!
+                    eve_sig = sign_payload(fraud_msg, eve_priv)
 
-                rogue_cns = pack_cns_file(CIPHER_AES, iv, wrapped_key, tag, eve_sig, ct)
+                    rogue_cns = pack_cns_file(CIPHER_AES, iv, wrapped_key, tag, eve_sig, ct)
 
-                # Bob unwraps and decrypts
-                unpacked = unpack_cns_file(rogue_cns)
-                recov_key = unwrap_session_key(unpacked["wrapped_key"], bob_priv)
-                hmac_ok = verify_hmac(recov_key, unpacked["ciphertext"], unpacked["hmac_tag"])
-                dec_msg = decrypt_symmetric(unpacked["ciphertext"], recov_key, unpacked["iv"], CIPHER_AES)
+                    # Bob unwraps and decrypts
+                    unpacked = unpack_cns_file(rogue_cns)
+                    recov_key = unwrap_session_key(unpacked["wrapped_key"], bob_priv)
+                    hmac_ok = verify_hmac(recov_key, unpacked["ciphertext"], unpacked["hmac_tag"])
+                    dec_msg = decrypt_symmetric(unpacked["ciphertext"], recov_key, unpacked["iv"], CIPHER_AES)
 
-                # Bob validates against Alice's public key
-                is_alice_sig = verify_signature(dec_msg, unpacked["signature"], alice_pub)
+                    # Bob validates against Alice's public key
+                    is_alice_sig = verify_signature(dec_msg, unpacked["signature"], alice_pub)
+            except Exception as e:
+                st.error(f"🚨 Simulation error: {e}")
+                st.stop()
 
             col_b1, col_b2 = st.columns(2)
             with col_b1:
