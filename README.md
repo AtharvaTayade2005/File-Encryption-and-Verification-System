@@ -31,6 +31,7 @@ Comprehensive guides for teammates, collaborators, and professors:
 - 🔬 **[Codebase Line-by-Line & Function Walkthrough](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/CODEBASE_LINE_BY_LINE_WALKTHROUGH.md)**: Detailed explanations of what every line of code does across all modules.
 - 🚀 **[User Guide & Practical Workflows](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/USER_GUIDE_AND_WORKFLOWS.md)**: End-to-end instructions for CLI, Streamlit web app, automated demo suite, and pytest.
 - 🛡️ **[Attack Defense & Security Model](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/ATTACK_DEFENSE_AND_SECURITY_MODEL.md)**: Cryptographic proofs and defenses against padding oracles, timing attacks, Bleichenbacher chosen-ciphertext, and Trojan horse disguises.
+- ⚡ **[Pipeline Execution Steps (Code & File Mapping)](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/PIPELINE_EXECUTION_STEPS.md)**: Direct, concise step-by-step breakdown of encrypt/decrypt code actions and source file mappings.
 - 🐞 **[Bugs Found & Resolved Audit Report](file:///d:/Coding/GitHub/File-Encryption-and-Verification-System/docs/BUGS_FOUND_AND_FIXED.md)**: Audit log detailing bugs identified, root causes, mathematical fixes, and test evidence.
 
 ---
